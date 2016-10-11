@@ -106,29 +106,39 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
                             .content(R.string.content_test)
                             .inputType(InputType.TYPE_CLASS_TEXT)
                             .input(R.string.input_hint, R.string.input_prefill, new MaterialDialog.InputCallback() {
-                                @Override public void onInput(MaterialDialog dialog, CharSequence input) {
-                                    // On FAB click, receive user input. Make sure the stock doesn't already exist
-                                    // in the DB and proceed accordingly
-                                    Cursor c = getContentResolver().query(QuoteProvider.Quotes.CONTENT_URI,
-                                            new String[] { QuoteColumns.SYMBOL }, QuoteColumns.SYMBOL + "= ?",
-                                            new String[] { input.toString() }, null);
+                                @Override
+                                public void onInput(MaterialDialog dialog, final CharSequence input) {
 
-                                    if (c != null && c.getCount() != 0) {
-                                        Toast toast = Toast.makeText(MyStocksActivity.this,
-                                                getString(R.string.stock_found), Toast.LENGTH_LONG);
-                                        toast.setGravity(Gravity.CENTER, Gravity.CENTER, 0);
-                                        toast.show();
+                                    // On FAB click, receive user input. On a background thread make
+                                    // sure the stock doesn't already exist in the DB and proceed accordingly.
+                                    new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
 
-                                    } else {
-                                        // Add the stock to DB
-                                        mServiceIntent.putExtra("tag", TAG_ADD);
-                                        mServiceIntent.putExtra(TAG_SYMBOL, input.toString());
-                                        startService(mServiceIntent);
-                                    }
+                                            Cursor c = getContentResolver().query(QuoteProvider.Quotes.CONTENT_URI,
+                                                    new String[] { QuoteColumns.SYMBOL }, QuoteColumns.SYMBOL + "= ?",
+                                                    new String[] { input.toString() }, null);
 
-                                    try {
-                                        c.close();
-                                    } catch(Exception e){}
+                                            if (c != null && c.getCount() != 0) {
+                                                Toast toast = Toast.makeText(MyStocksActivity.this,
+                                                        getString(R.string.stock_found), Toast.LENGTH_LONG);
+                                                toast.setGravity(Gravity.CENTER, Gravity.CENTER, 0);
+                                                toast.show();
+
+                                                try {
+                                                    c.close();
+                                                } catch(Exception e){}
+
+                                            } else {
+                                                // Add the stock to DB
+                                                mServiceIntent.putExtra("tag", TAG_ADD);
+                                                mServiceIntent.putExtra(TAG_SYMBOL, input.toString());
+                                                startService(mServiceIntent);
+                                            }
+
+                                        }
+
+                                    }).start();
                                 }
                             })
                             .show();
